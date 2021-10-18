@@ -1,0 +1,9 @@
+[Unit]
+Description=Export Xen statistics to Prometheus
+
+[Service]
+EnvironmentFile=-@SYSCONFDIR@/default/@NAME@
+ExecStart=@BINDIR@/@NAME@ $ARGS
+
+[Install]
+WantedBy=multi-user.target

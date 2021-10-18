@@ -1,4 +1,4 @@
-module github.com/bwesterb/go-xentop
+module github.com/Rudd-O/go-xentop
 
 require github.com/prometheus/client_golang v1.0.0
 

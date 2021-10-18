@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/bwesterb/go-xentop"
+	"github.com/Rudd-O/go-xentop"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )

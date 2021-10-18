@@ -1,1 +1,5 @@
+*.rpm
+*.tar.gz
 /prometheus-xentop/prometheus-xentop
+bin
+prometheus-xentop.service
