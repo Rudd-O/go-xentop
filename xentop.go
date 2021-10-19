@@ -113,7 +113,7 @@ func parseLine(line string, header []string) (map[string]string, error) {
 }
 
 func XenTopCmd(lines chan<- Line, errs chan<- error, cmdPath string) {
-	cmd := exec.Command(cmdPath, "-b", "-f")
+	cmd := exec.Command(cmdPath, "-b", "-f", "-d", "1")
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
