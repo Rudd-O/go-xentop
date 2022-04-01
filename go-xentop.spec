@@ -3,7 +3,7 @@
 %define mybuildnumber %{?build_number}%{?!build_number:1}
 
 Name:           go-xentop
-Version:        1.0.2
+Version:        1.0.3
 Release:        %{mybuildnumber}%{?dist}
 Summary:        Wraps xentop.
 Group:          Applications/System
@@ -15,6 +15,7 @@ Source0:        %{name}-%{version}.tar.gz
 BuildRequires:  sed
 BuildRequires:  make
 BuildRequires:  golang
+BuildRequires:  systemd-rpm-macros
 
 %description
 This package runs a Prometheus exporter that exports Xen VM statistics.
