@@ -3,7 +3,7 @@
 %define mybuildnumber %{?build_number}%{?!build_number:1}
 
 Name:           go-xentop
-Version:        1.0.1
+Version:        1.0.2
 Release:        %{mybuildnumber}%{?dist}
 Summary:        Wraps xentop.
 Group:          Applications/System

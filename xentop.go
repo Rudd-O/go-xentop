@@ -56,7 +56,7 @@ func fillLine(data map[string]string) (ret Line, errs []error) {
 		}
 		delete(data, fieldName)
 		field := sv.FieldByIndex(fieldType.Index)
-		if val == "n/a" || val == "no-limit" {
+		if val == "n/a" || val == "no-limit" || val == "-" {
 			continue
 		}
 		switch fieldType.Type.Kind() {
