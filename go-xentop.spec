@@ -3,7 +3,7 @@
 %define mybuildnumber %{?build_number}%{?!build_number:1}
 
 Name:           go-xentop
-Version:        1.0.3
+Version:        2.0.0
 Release:        %{mybuildnumber}%{?dist}
 Summary:        Wraps xentop.
 Group:          Applications/System
@@ -20,6 +20,9 @@ BuildRequires:  xen-devel
 
 %description
 This package runs a Prometheus exporter that exports Xen VM statistics.
+This new major version changes metric names and uses direct connection
+to xend for more accurate statistics, and statistics not collected
+before, like RAM usage.
 
 %prep
 %setup -q
