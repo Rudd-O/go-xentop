@@ -6,7 +6,7 @@ ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 bin/prometheus-xentop: prometheus-xentop/*.go *.go
 	cd $(ROOT_DIR) && \
-	GOBIN=$(ROOT_DIR)/bin CGO_ENABLED=0 go install ./...
+	GOBIN=$(ROOT_DIR)/bin CGO_ENABLED=1 go install ./...
 
 .PHONY: clean dist rpm srpm install
 
