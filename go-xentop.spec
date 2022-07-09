@@ -16,6 +16,7 @@ BuildRequires:  sed
 BuildRequires:  make
 BuildRequires:  golang
 BuildRequires:  systemd-rpm-macros
+BuildRequires:  xen-devel
 
 %description
 This package runs a Prometheus exporter that exports Xen VM statistics.
