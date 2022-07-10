@@ -2,16 +2,17 @@
 
 %define mybuildnumber %{?build_number}%{?!build_number:1}
 
-Name:           go-xentop
-Version:        2.0.0
+Name:           prometheus-xentop
+Version:        2.0.1
 Release:        %{mybuildnumber}%{?dist}
-Summary:        Wraps xentop.
+Summary:        Prometheus exporter for xen stats.
 Group:          Applications/System
 
 License:        LGPLv3
-URL:            https://github.com/Rudd-O/go-xentop
+URL:            https://github.com/Rudd-O/prometheus-xentop
 Source0:        %{name}-%{version}.tar.gz
 
+Obsoletes:      go-xentop < 2.0.1
 BuildRequires:  sed
 BuildRequires:  make
 BuildRequires:  golang
@@ -37,19 +38,19 @@ cp -f "README.md" "%{buildroot}%{_defaultdocdir}/%{name}/README.md"
 
 %files
 %defattr(-, root, root)
-%config(noreplace) %{_sysconfdir}/default/prometheus-xentop
-%{_unitdir}/prometheus-xentop.service
+%config(noreplace) %{_sysconfdir}/default/%{name}
+%{_unitdir}/%{name}.service
 %attr(0755, root, root) %{_bindir}/*
 %doc %{_defaultdocdir}/%{name}/README.md
 
 %post
-%systemd_post prometheus-xentop.service
+%systemd_post %{name}.service
 
 %preun
-%systemd_preun prometheus-xentop.service
+%systemd_preun %{name}.service
 
 %postun
-%systemd_postun_with_restart prometheus-xentop.service
+%systemd_postun_with_restart %{name}.service
 
 %changelog
 * Tue Oct 19 2021  Manuel Amador (Rudd-O) <rudd-o@rudd-o.com>
