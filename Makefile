@@ -4,7 +4,7 @@ UNITDIR=/usr/lib/systemd/system
 DESTDIR=
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-bin/prometheus-xentop: prometheus-xentop/*.go
+bin/prometheus-xentop: xenstat/*.go cmd/prometheus-xentop/*.go
 	cd $(ROOT_DIR) && \
 	GOBIN=$(ROOT_DIR)/bin CGO_ENABLED=1 go install ./...
 

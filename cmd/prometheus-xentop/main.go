@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Rudd-O/prometheus-xentop/xenstat"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -52,6 +53,9 @@ func knownMetrics() []knownMetric {
 		"vbd_written_bytes_total": {
 			"counter", "Total bytes this domain has written to from virtual block devices", []string{"dom"},
 		},
+		"nic_count": {
+			"gauge", "Count of virtual network devices assigned to this domain", []string{"dom"},
+		},
 		"net_transmit_bytes_total": {
 			"counter", "Total bytes this domain has transmitted through virtual network devices", []string{"dom"},
 		},
@@ -78,7 +82,7 @@ func knownMetrics() []knownMetric {
 }
 
 type XenCollector struct {
-	x       *XenStats
+	x       *xenstat.XenStats
 	metrics []knownMetric
 }
 
@@ -95,7 +99,7 @@ func (g *XenCollector) Describe(ch chan<- *prometheus.Desc) {
 func (g *XenCollector) Collect(ch chan<- prometheus.Metric) {
 	var err error
 	if g.x == nil {
-		if g.x, err = NewXenStats(); err != nil {
+		if g.x, err = xenstat.NewXenStats(); err != nil {
 			log.Printf("Error collecting metrics: %s", err)
 			return
 		}
@@ -116,15 +120,15 @@ func (g *XenCollector) Collect(ch chan<- prometheus.Metric) {
 		for _, metric := range g.metrics {
 			switch metric.Name {
 			case "cpu_seconds_total":
-				val = float64(domain.CPU)
+				val = float64(domain.CPUSeconds)
 			case "cpu_count":
 				val = float64(domain.NumVCPUs)
 			case "memory_used_bytes":
-				val = float64(domain.Memory)
+				val = float64(domain.MemoryBytes)
 			case "memory_maximum_bytes":
-				val = float64(domain.Maxmem)
+				val = float64(domain.MaxmemBytes)
 			case "vbd_count":
-				val = float64(domain.VBDCount)
+				val = float64(domain.NumVBDs)
 			case "vbd_out_of_requests_errors_total":
 				val = float64(domain.VBD_OutOfRequests)
 			case "vbd_read_requests_total":
@@ -135,6 +139,8 @@ func (g *XenCollector) Collect(ch chan<- prometheus.Metric) {
 				val = float64(domain.VBD_BytesRead)
 			case "vbd_written_bytes_total":
 				val = float64(domain.VBD_BytesWritten)
+			case "nic_count":
+				val = float64(domain.NumNICs)
 			case "net_transmit_bytes_total":
 				val = float64(domain.NIC_BytesTransmitted)
 			case "net_receive_bytes_total":
