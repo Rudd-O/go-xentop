@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -16,8 +17,8 @@ type knownMetric struct {
 	Desc *prometheus.Desc
 }
 
-func knownMetrics() []knownMetric {
-	var m []knownMetric
+func knownMetrics() map[string]knownMetric {
+	var m map[string]knownMetric
 	for metricName, metric := range map[string]struct {
 		Type        string
 		Description string
@@ -39,28 +40,28 @@ func knownMetrics() []knownMetric {
 			"gauge", "Count of virtual block devices assigned to this domain", []string{"dom"},
 		},
 		"vbd_out_of_requests_errors_total": {
-			"counter", "Count of out-of-request situations this domain has encountered", []string{"dom"},
+			"counter", "Count of out-of-request situations this domain has encountered", []string{"dom", "vbd"},
 		},
 		"vbd_read_requests_total": {
-			"counter", "Count of read requests this domain has issued", []string{"dom"},
+			"counter", "Count of read requests this domain has issued", []string{"dom", "vbd"},
 		},
 		"vbd_write_requests_total": {
-			"counter", "Count of write requests this domain has issued", []string{"dom"},
+			"counter", "Count of write requests this domain has issued", []string{"dom", "vbd"},
 		},
 		"vbd_read_bytes_total": {
-			"counter", "Total bytes this domain has read from virtual block devices", []string{"dom"},
+			"counter", "Total bytes this domain has read from virtual block devices", []string{"dom", "vbd"},
 		},
 		"vbd_written_bytes_total": {
-			"counter", "Total bytes this domain has written to from virtual block devices", []string{"dom"},
+			"counter", "Total bytes this domain has written to from virtual block devices", []string{"dom", "vbd"},
 		},
 		"nic_count": {
 			"gauge", "Count of virtual network devices assigned to this domain", []string{"dom"},
 		},
 		"net_transmit_bytes_total": {
-			"counter", "Total bytes this domain has transmitted through virtual network devices", []string{"dom"},
+			"counter", "Total bytes this domain has transmitted through virtual network devices", []string{"dom", "nic"},
 		},
 		"net_receive_bytes_total": {
-			"counter", "Total bytes this domain has received through virtual network devices", []string{"dom"},
+			"counter", "Total bytes this domain has received through virtual network devices", []string{"dom", "nic"},
 		},
 	} {
 		fullName := prometheus.BuildFQName("xen", "", metricName)
@@ -76,14 +77,14 @@ func knownMetrics() []knownMetric {
 			metric.Description,
 			metric.Labels, nil,
 		)
-		m = append(m, knownMetric{Name: metricName, Type: typ, Desc: desc})
+		m[metricName] = knownMetric{Name: metricName, Type: typ, Desc: desc}
 	}
 	return m
 }
 
 type XenCollector struct {
 	x       *xenstat.XenStats
-	metrics []knownMetric
+	metrics map[string]knownMetric
 }
 
 func NewXenCollector() *XenCollector {
@@ -114,41 +115,24 @@ func (g *XenCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	f := prometheus.MustNewConstMetric
-
-	var val float64
+	m := g.metrics
 	for _, domain := range domaindata {
-		for _, metric := range g.metrics {
-			switch metric.Name {
-			case "cpu_seconds_total":
-				val = float64(domain.CPUSeconds)
-			case "cpu_count":
-				val = float64(domain.NumVCPUs)
-			case "memory_used_bytes":
-				val = float64(domain.MemoryBytes)
-			case "memory_maximum_bytes":
-				val = float64(domain.MaxmemBytes)
-			case "vbd_count":
-				val = float64(domain.NumVBDs)
-			case "vbd_out_of_requests_errors_total":
-				val = float64(domain.VBD_OutOfRequests)
-			case "vbd_read_requests_total":
-				val = float64(domain.VBD_ReadRequests)
-			case "vbd_write_requests_total":
-				val = float64(domain.VBD_ReadRequests)
-			case "vbd_read_bytes_total":
-				val = float64(domain.VBD_BytesRead)
-			case "vbd_written_bytes_total":
-				val = float64(domain.VBD_BytesWritten)
-			case "nic_count":
-				val = float64(domain.NumNICs)
-			case "net_transmit_bytes_total":
-				val = float64(domain.NIC_BytesTransmitted)
-			case "net_receive_bytes_total":
-				val = float64(domain.NIC_BytesReceived)
-			default:
-				log.Printf("unknown metric %s", metric.Name)
-			}
-			ch <- f(metric.Desc, metric.Type, val, domain.Name)
+		ch <- f(m["cpu_seconds_total"].Desc, m["cpu_seconds_total"].Type, float64(domain.CPUSeconds), domain.Name)
+		ch <- f(m["cpu_count"].Desc, m["cpu_count"].Type, float64(domain.NumVCPUs), domain.Name)
+		ch <- f(m["memory_used_bytes"].Desc, m["memory_used_bytes"].Type, float64(domain.MemoryBytes), domain.Name)
+		ch <- f(m["memory_maximum_bytes"].Desc, m["memory_maximum_bytes"].Type, float64(domain.MaxmemBytes), domain.Name)
+		ch <- f(m["vbd_count"].Desc, m["vbd_count"].Type, float64(domain.NumVBDs), domain.Name)
+		ch <- f(m["nic_count"].Desc, m["nic_count"].Type, float64(domain.NumNICs), domain.Name)
+		for n, v := range domain.VBDs {
+			ch <- f(m["vbd_out_of_requests_errors_total"].Desc, m["vbd_out_of_requests_errors_total"].Type, float64(v.OutOfRequests), domain.Name, fmt.Sprintf("%d", n))
+			ch <- f(m["vbd_read_requests_total"].Desc, m["vbd_read_requests_total"].Type, float64(v.ReadRequests), domain.Name, fmt.Sprintf("%d", n))
+			ch <- f(m["vbd_write_requests_total"].Desc, m["vbd_write_requests_total"].Type, float64(v.WriteRequests), domain.Name, fmt.Sprintf("%d", n))
+			ch <- f(m["vbd_read_bytes_total"].Desc, m["vbd_read_bytes_total"].Type, float64(v.BytesRead), domain.Name, fmt.Sprintf("%d", n))
+			ch <- f(m["vbd_written_bytes_total"].Desc, m["vbd_written_bytes_total"].Type, float64(v.BytesWritten), domain.Name, fmt.Sprintf("%d", n))
+		}
+		for n, v := range domain.NICs {
+			ch <- f(m["net_transmit_bytes_total"].Desc, m["net_transmit_bytes_total"].Type, float64(v.BytesTransmitted), domain.Name, fmt.Sprintf("%d", n))
+			ch <- f(m["net_receive_bytes_total"].Desc, m["net_receive_bytes_total"].Type, float64(v.BytesReceived), domain.Name, fmt.Sprintf("%d", n))
 		}
 	}
 }

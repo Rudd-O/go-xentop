@@ -25,6 +25,26 @@ const (
 	Running  DomainState = "running"
 )
 
+type VBDInfo struct {
+	// OutOfRequests is the count of out-of-request events for this device.
+	OutOfRequests uint64
+	// ReadRequests is the count of read requests for this device.
+	ReadRequests uint64
+	// ReadRequests is the count of write requests for this device.
+	WriteRequests uint64
+	// BytesRead is the total number of bytes read by this device.
+	BytesRead uint64
+	// BytesWritten is the total number of bytes read by this device.
+	BytesWritten uint64
+}
+
+type NICInfo struct {
+	// BytesTransmitted is the total number of bytes sent by this virtual NIC.
+	BytesTransmitted uint64
+	// BytesTransmitted is the total number of bytes received by this virtual NIC.
+	BytesReceived uint64
+}
+
 // DomainInfo represents a snapshot of numeric information about a Xen domain.
 type DomainInfo struct {
 	// Name is the domain name.
@@ -41,22 +61,12 @@ type DomainInfo struct {
 	MaxmemBytes uint64
 	// NumVBDs is the number of virtual block devices assigned to the domain.
 	NumVBDs uint32
-	// VBD_OutOfRequests is the count of out-of-request events for the domain.
-	VBD_OutOfRequests uint64
-	// VBD_ReadRequests is the count of read requests for the domain.
-	VBD_ReadRequests uint64
-	// VBD_ReadRequests is the count of write requests for the domain.
-	VBD_WriteRequests uint64
-	// VBD_BytesRead is the total number of bytes read across all block devices of the domain.
-	VBD_BytesRead uint64
-	// VBD_BytesWritten is the total number of bytes read across all block devices of the domain.
-	VBD_BytesWritten uint64
 	// NumNICs is the number of Xen-virtual network interfaces assigned to the domain.
 	NumNICs uint32
-	// NIC_BytesTransmitted is the total number of bytes sent by the virtual NICs of the domain.
-	NIC_BytesTransmitted uint64
-	// NIC_BytesTransmitted is the total number of bytes received by the virtual NICs of the domain.
-	NIC_BytesReceived uint64
+	// VBDs contains a list of VBDInfo that disaggregates the statistics for each virtual block device.
+	VBDs []VBDInfo
+	// NICs contains a list of NICInfo that disaggregates the statistics for each virtual network device.
+	NICs []NICInfo
 }
 
 type vbdT int
@@ -76,44 +86,35 @@ const (
 	f_NET_RX
 )
 
-func tot_net_bytes(domain *C.xenstat_domain, t netT) uint64 {
-	num_nics := uint32(C.xenstat_domain_num_networks(domain))
-	var agg C.ulonglong
-	var i uint32
+func dev_net_bytes(domain *C.xenstat_domain, t netT, devid uint32) uint64 {
 	var v *C.xenstat_network
-	for i = 0; i < num_nics; i++ {
-		v = C.xenstat_domain_network(domain, C.uint(i))
-		switch t {
-		case f_NET_RX:
-			agg = agg + C.xenstat_network_rbytes(v)
-		case f_NET_TX:
-			agg = agg + C.xenstat_network_tbytes(v)
-		}
+	v = C.xenstat_domain_network(domain, C.uint(devid))
+	switch t {
+	case f_NET_RX:
+		return uint64(C.xenstat_network_rbytes(v))
+	case f_NET_TX:
+		return uint64(C.xenstat_network_tbytes(v))
 	}
-	return uint64(agg)
+	panic("wrong case")
 }
 
-func tot_vbd_reqs(domain *C.xenstat_domain, t vbdT) uint64 {
-	num_vbds := uint32(C.xenstat_domain_num_vbds(domain))
-	var agg C.ulonglong
+func dev_vbd_reqs(domain *C.xenstat_domain, t vbdT, devid uint32) uint64 {
 	var i uint32
 	var v *C.xenstat_vbd
-	for i = 0; i < num_vbds; i++ {
-		v = C.xenstat_domain_vbd(domain, C.uint(i))
-		switch t {
-		case f_VBD_OO:
-			agg = agg + C.xenstat_vbd_oo_reqs(v)
-		case f_VBD_RD:
-			agg = agg + C.xenstat_vbd_rd_reqs(v)
-		case f_VBD_WR:
-			agg = agg + C.xenstat_vbd_wr_reqs(v)
-		case f_VBD_RSECT:
-			agg = agg + C.xenstat_vbd_rd_sects(v)
-		case f_VBD_WSECT:
-			agg = agg + C.xenstat_vbd_wr_sects(v)
-		}
+	v = C.xenstat_domain_vbd(domain, C.uint(i))
+	switch t {
+	case f_VBD_OO:
+		return uint64(C.xenstat_vbd_oo_reqs(v))
+	case f_VBD_RD:
+		return uint64(C.xenstat_vbd_rd_reqs(v))
+	case f_VBD_WR:
+		return uint64(C.xenstat_vbd_wr_reqs(v))
+	case f_VBD_RSECT:
+		return uint64(C.xenstat_vbd_rd_sects(v))
+	case f_VBD_WSECT:
+		return uint64(C.xenstat_vbd_wr_sects(v))
 	}
-	return uint64(agg)
+	panic("wrong case")
 }
 
 // XenStats represents a connection to the xend service which permits
@@ -205,6 +206,29 @@ func (x *XenStats) Poll() ([]DomainInfo, error) {
 		if C.xenstat_domain_running(domain) != 0 {
 			state = Running
 		}
+
+		num_vbds := uint32(C.xenstat_domain_num_vbds(domain))
+		num_nics := uint32(C.xenstat_domain_num_networks(domain))
+
+		var i uint32
+		var vv []VBDInfo
+		var nn []NICInfo
+		for i = 0; i < num_vbds; i++ {
+			vv = append(vv, VBDInfo{
+				OutOfRequests: dev_vbd_reqs(domain, f_VBD_OO, i),
+				ReadRequests:  dev_vbd_reqs(domain, f_VBD_RD, i),
+				WriteRequests: dev_vbd_reqs(domain, f_VBD_WR, i),
+				BytesRead:     dev_vbd_reqs(domain, f_VBD_RSECT, i) * 512,
+				BytesWritten:  dev_vbd_reqs(domain, f_VBD_WSECT, i) * 512,
+			})
+		}
+		for i = 0; i < num_nics; i++ {
+			nn = append(nn, NICInfo{
+				BytesTransmitted: dev_net_bytes(domain, f_NET_TX, i),
+				BytesReceived:    dev_net_bytes(domain, f_NET_RX, i),
+			})
+		}
+
 		domaindata = append(domaindata, DomainInfo{
 			name,
 			state,
@@ -213,14 +237,9 @@ func (x *XenStats) Poll() ([]DomainInfo, error) {
 			uint64(C.xenstat_domain_cur_mem(domain)),
 			uint64(C.xenstat_domain_max_mem(domain)),
 			uint32(C.xenstat_domain_num_vbds(domain)),
-			uint64(tot_vbd_reqs(domain, f_VBD_OO)),
-			uint64(tot_vbd_reqs(domain, f_VBD_RD)),
-			uint64(tot_vbd_reqs(domain, f_VBD_WR)),
-			uint64(tot_vbd_reqs(domain, f_VBD_RSECT) * 512),
-			uint64(tot_vbd_reqs(domain, f_VBD_WSECT) * 512),
 			uint32(C.xenstat_domain_num_networks(domain)),
-			uint64(tot_net_bytes(domain, f_NET_TX)),
-			uint64(tot_net_bytes(domain, f_NET_RX)),
+			vv,
+			nn,
 		},
 		)
 	}
