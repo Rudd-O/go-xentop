@@ -18,7 +18,7 @@ type knownMetric struct {
 }
 
 func knownMetrics() map[string]knownMetric {
-	m = make(map[string]knownMetric)
+	m := make(map[string]knownMetric)
 	for metricName, metric := range map[string]struct {
 		Type        string
 		Description string
