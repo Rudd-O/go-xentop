@@ -47,7 +47,7 @@ cp -f "README.md" "%{buildroot}%{_defaultdocdir}/%{name}/README.md"
 %systemd_post %{name}.service
 
 %preun
-%systemd_preun go-xentop.service
+%systemd_preun go-xentop.service >/dev/null 2>&1 || /usr/bin/true
 %systemd_preun %{name}.service
 
 %postun
