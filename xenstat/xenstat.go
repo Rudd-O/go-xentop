@@ -5,6 +5,7 @@ package xenstat
 import "C"
 import (
 	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -213,6 +214,10 @@ func (x *XenStats) Poll() ([]DomainInfo, error) {
 		var i uint32
 		var vv []VBDInfo
 		var nn []NICInfo
+		fmt.Printf("%s %d %d\n", name, i, dev_vbd_reqs(domain, f_VBD_RSECT, i))
+		fmt.Printf("%s %d %d\n", name, i, dev_vbd_reqs(domain, f_VBD_RSECT, i)*512)
+		fmt.Printf("%s %d %d\n", name, i, dev_vbd_reqs(domain, f_VBD_WSECT, i))
+		fmt.Printf("%S %d %d\n", name, i, dev_vbd_reqs(domain, f_VBD_WSECT, i)*512)
 		for i = 0; i < num_vbds; i++ {
 			vv = append(vv, VBDInfo{
 				OutOfRequests: dev_vbd_reqs(domain, f_VBD_OO, i),
