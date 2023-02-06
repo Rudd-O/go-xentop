@@ -6,6 +6,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 )
 
@@ -99,21 +100,23 @@ func dev_net_bytes(domain *C.xenstat_domain, t netT, devid uint32) uint64 {
 	panic("wrong case")
 }
 
-func dev_vbd_reqs(domain *C.xenstat_domain, t vbdT, devid uint32) uint64 {
-	var i uint32
+func dev_vbd_reqs(domain *C.xenstat_domain, t vbdT, devid uint32) (uint64, error) {
 	var v *C.xenstat_vbd
-	v = C.xenstat_domain_vbd(domain, C.uint(i))
+	v = C.xenstat_domain_vbd(domain, C.uint(devid))
+	if v == nil {
+		return 0, fmt.Errorf("could not get VBD %d type %v from domain %+v", devid, t, domain)
+	}
 	switch t {
 	case f_VBD_OO:
-		return uint64(C.xenstat_vbd_oo_reqs(v))
+		return uint64(C.xenstat_vbd_oo_reqs(v)), nil
 	case f_VBD_RD:
-		return uint64(C.xenstat_vbd_rd_reqs(v))
+		return uint64(C.xenstat_vbd_rd_reqs(v)), nil
 	case f_VBD_WR:
-		return uint64(C.xenstat_vbd_wr_reqs(v))
+		return uint64(C.xenstat_vbd_wr_reqs(v)), nil
 	case f_VBD_RSECT:
-		return uint64(C.xenstat_vbd_rd_sects(v))
+		return uint64(C.xenstat_vbd_rd_sects(v)), nil
 	case f_VBD_WSECT:
-		return uint64(C.xenstat_vbd_wr_sects(v))
+		return uint64(C.xenstat_vbd_wr_sects(v)), nil
 	}
 	panic("wrong case")
 }
@@ -214,18 +217,40 @@ func (x *XenStats) Poll() ([]DomainInfo, error) {
 		var i uint32
 		var vv []VBDInfo
 		var nn []NICInfo
-		fmt.Printf("%s %d %d\n", name, i, dev_vbd_reqs(domain, f_VBD_RSECT, i))
-		fmt.Printf("%s %d %d\n", name, i, dev_vbd_reqs(domain, f_VBD_RSECT, i)*512)
-		fmt.Printf("%s %d %d\n", name, i, dev_vbd_reqs(domain, f_VBD_WSECT, i))
-		fmt.Printf("%S %d %d\n", name, i, dev_vbd_reqs(domain, f_VBD_WSECT, i)*512)
 		for i = 0; i < num_vbds; i++ {
-			vv = append(vv, VBDInfo{
-				OutOfRequests: dev_vbd_reqs(domain, f_VBD_OO, i),
-				ReadRequests:  dev_vbd_reqs(domain, f_VBD_RD, i),
-				WriteRequests: dev_vbd_reqs(domain, f_VBD_WR, i),
-				BytesRead:     dev_vbd_reqs(domain, f_VBD_RSECT, i) * 512,
-				BytesWritten:  dev_vbd_reqs(domain, f_VBD_WSECT, i) * 512,
-			})
+			outOfRequests, err := dev_vbd_reqs(domain, f_VBD_OO, i)
+			if err != nil {
+				log.Printf("%s: %s", name, err)
+				continue
+			}
+			readRequests, err := dev_vbd_reqs(domain, f_VBD_RD, i)
+			if err != nil {
+				log.Printf("%s: %s", name, err)
+				continue
+			}
+			writeRequests, err := dev_vbd_reqs(domain, f_VBD_WR, i)
+			if err != nil {
+				log.Printf("%s: %s", name, err)
+				continue
+			}
+			sectorsRead, err := dev_vbd_reqs(domain, f_VBD_RSECT, i)
+			if err != nil {
+				log.Printf("%s: %s", name, err)
+				continue
+			}
+			sectorsWritten, err := dev_vbd_reqs(domain, f_VBD_WSECT, i)
+			if err != nil {
+				log.Printf("%s: %s", name, err)
+				continue
+			}
+			vbdinfo := VBDInfo{
+				OutOfRequests: outOfRequests,
+				ReadRequests:  readRequests,
+				WriteRequests: writeRequests,
+				BytesRead:     sectorsRead * 512,
+				BytesWritten:  sectorsWritten * 512,
+			}
+			vv = append(vv, vbdinfo)
 		}
 		for i = 0; i < num_nics; i++ {
 			nn = append(nn, NICInfo{
