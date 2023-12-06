@@ -28,6 +28,10 @@ const (
 )
 
 type VBDInfo struct {
+	// Major is the major block device number.
+	Major uint8
+	// Minor is the minor block device number.
+	Minor uint8
 	// OutOfRequests is the count of out-of-request events for this device.
 	OutOfRequests uint64
 	// ReadRequests is the count of read requests for this device.
@@ -119,6 +123,18 @@ func dev_vbd_reqs(domain *C.xenstat_domain, t vbdT, devid uint32) (uint64, error
 		return uint64(C.xenstat_vbd_wr_sects(v)), nil
 	}
 	panic("wrong case")
+}
+
+func dev_vbd_major_minor(domain *C.xenstat_domain, devid uint32) (uint8, uint8, error) {
+	var v *C.xenstat_vbd
+	v = C.xenstat_domain_vbd(domain, C.uint(devid))
+	if v == nil {
+		return 0, 0, fmt.Errorf("could not get VBD %d major/minor from domain %+v", devid, domain)
+	}
+	var dev C.uint = C.xenstat_vbd_dev(v)
+	var major uint8 = uint8(255 & (dev >> 8))
+	var minor uint8 = uint8(255 & dev)
+	return major, minor, nil
 }
 
 // XenStats represents a connection to the xend service which permits
@@ -243,7 +259,14 @@ func (x *XenStats) Poll() ([]DomainInfo, error) {
 				log.Printf("%s: %s", name, err)
 				continue
 			}
+			major, minor, err := dev_vbd_major_minor(domain, i)
+			if err != nil {
+				log.Printf("%s: %s", name, err)
+				continue
+			}
 			vbdinfo := VBDInfo{
+				Major:         major,
+				Minor:         minor,
 				OutOfRequests: outOfRequests,
 				ReadRequests:  readRequests,
 				WriteRequests: writeRequests,

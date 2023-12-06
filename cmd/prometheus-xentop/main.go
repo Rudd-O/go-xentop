@@ -40,19 +40,19 @@ func knownMetrics() map[string]knownMetric {
 			"gauge", "Count of virtual block devices assigned to this domain", []string{"dom"},
 		},
 		"vbd_out_of_requests_errors_total": {
-			"counter", "Count of out-of-request situations this domain has encountered", []string{"dom", "vbd"},
+			"counter", "Count of out-of-request situations this domain has encountered", []string{"dom", "major", "minor"},
 		},
 		"vbd_read_requests_total": {
-			"counter", "Count of read requests this domain has issued", []string{"dom", "vbd"},
+			"counter", "Count of read requests this domain has issued", []string{"dom", "major", "minor"},
 		},
 		"vbd_write_requests_total": {
-			"counter", "Count of write requests this domain has issued", []string{"dom", "vbd"},
+			"counter", "Count of write requests this domain has issued", []string{"dom", "major", "minor"},
 		},
 		"vbd_read_bytes_total": {
-			"counter", "Total bytes this domain has read from virtual block devices", []string{"dom", "vbd"},
+			"counter", "Total bytes this domain has read from virtual block devices", []string{"dom", "major", "minor"},
 		},
 		"vbd_written_bytes_total": {
-			"counter", "Total bytes this domain has written to from virtual block devices", []string{"dom", "vbd"},
+			"counter", "Total bytes this domain has written to from virtual block devices", []string{"dom", "major", "minor"},
 		},
 		"nic_count": {
 			"gauge", "Count of virtual network devices assigned to this domain", []string{"dom"},
@@ -123,12 +123,12 @@ func (g *XenCollector) Collect(ch chan<- prometheus.Metric) {
 		ch <- f(m["memory_maximum_bytes"].Desc, m["memory_maximum_bytes"].Type, float64(domain.MaxmemBytes), domain.Name)
 		ch <- f(m["vbd_count"].Desc, m["vbd_count"].Type, float64(domain.NumVBDs), domain.Name)
 		ch <- f(m["nic_count"].Desc, m["nic_count"].Type, float64(domain.NumNICs), domain.Name)
-		for n, v := range domain.VBDs {
-			ch <- f(m["vbd_out_of_requests_errors_total"].Desc, m["vbd_out_of_requests_errors_total"].Type, float64(v.OutOfRequests), domain.Name, fmt.Sprintf("%d", n))
-			ch <- f(m["vbd_read_requests_total"].Desc, m["vbd_read_requests_total"].Type, float64(v.ReadRequests), domain.Name, fmt.Sprintf("%d", n))
-			ch <- f(m["vbd_write_requests_total"].Desc, m["vbd_write_requests_total"].Type, float64(v.WriteRequests), domain.Name, fmt.Sprintf("%d", n))
-			ch <- f(m["vbd_read_bytes_total"].Desc, m["vbd_read_bytes_total"].Type, float64(v.BytesRead), domain.Name, fmt.Sprintf("%d", n))
-			ch <- f(m["vbd_written_bytes_total"].Desc, m["vbd_written_bytes_total"].Type, float64(v.BytesWritten), domain.Name, fmt.Sprintf("%d", n))
+		for _, v := range domain.VBDs {
+			ch <- f(m["vbd_out_of_requests_errors_total"].Desc, m["vbd_out_of_requests_errors_total"].Type, float64(v.OutOfRequests), domain.Name, fmt.Sprintf("%d", v.Major), fmt.Sprintf("%d", v.Minor))
+			ch <- f(m["vbd_read_requests_total"].Desc, m["vbd_read_requests_total"].Type, float64(v.ReadRequests), domain.Name, fmt.Sprintf("%d", v.Major), fmt.Sprintf("%d", v.Minor))
+			ch <- f(m["vbd_write_requests_total"].Desc, m["vbd_write_requests_total"].Type, float64(v.WriteRequests), domain.Name, fmt.Sprintf("%d", v.Major), fmt.Sprintf("%d", v.Minor))
+			ch <- f(m["vbd_read_bytes_total"].Desc, m["vbd_read_bytes_total"].Type, float64(v.BytesRead), domain.Name, fmt.Sprintf("%d", v.Major), fmt.Sprintf("%d", v.Minor))
+			ch <- f(m["vbd_written_bytes_total"].Desc, m["vbd_written_bytes_total"].Type, float64(v.BytesWritten), domain.Name, fmt.Sprintf("%d", v.Major), fmt.Sprintf("%d", v.Minor))
 		}
 		for n, v := range domain.NICs {
 			ch <- f(m["net_transmit_bytes_total"].Desc, m["net_transmit_bytes_total"].Type, float64(v.BytesTransmitted), domain.Name, fmt.Sprintf("%d", n))
