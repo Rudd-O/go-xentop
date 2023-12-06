@@ -3,7 +3,7 @@
 %define mybuildnumber %{?build_number}%{?!build_number:1}
 
 Name:           prometheus-xentop
-Version:        2.0.8
+Version:        2.0.9
 Release:        %{mybuildnumber}%{?dist}
 Summary:        Prometheus exporter for xen stats.
 Group:          Applications/System
@@ -47,7 +47,6 @@ cp -f "README.md" "%{buildroot}%{_defaultdocdir}/%{name}/README.md"
 %systemd_post %{name}.service
 
 %preun
-%systemd_preun go-xentop.service >/dev/null 2>&1 || /usr/bin/true
 %systemd_preun %{name}.service
 
 %postun
