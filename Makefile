@@ -1,23 +1,24 @@
+NAME=prometheus-xentop
 BINDIR=/usr/bin
 SYSCONFDIR=/etc
 UNITDIR=/usr/lib/systemd/system
 DESTDIR=
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-bin/prometheus-xentop: xenstat/*.go cmd/prometheus-xentop/*.go
+bin/$(NAME): xenstat/*.go cmd/$(NAME)/*.go
 	cd $(ROOT_DIR) && \
 	GOBIN=$(ROOT_DIR)/bin CGO_ENABLED=1 go install ./...
 
 .PHONY: clean dist rpm srpm install
 
-prometheus-xentop.service: prometheus-xentop.service.in
+$(NAME).service: $(NAME).service.in
 	cd $(ROOT_DIR) && \
-	cat prometheus-xentop.service.in | \
-	sed "s|@NAME@|prometheus-xentop|" | \
+	cat $(NAME).service.in | \
+	sed "s|@NAME@|$(NAME)|" | \
 	sed "s|@UNITDIR@|$(UNITDIR)|" | \
 	sed "s|@BINDIR@|$(BINDIR)|" | \
 	sed "s|@SYSCONFDIR@|$(SYSCONFDIR)|" \
-	> prometheus-xentop.service
+	> $(NAME).service
 
 clean:
 	cd $(ROOT_DIR) && find -name '*~' -print0 | xargs -0r rm -fv && rm -fr *.tar.gz *.rpm && rm -rf bin && rm -f *.service
@@ -35,14 +36,14 @@ rpm: dist
 	cd $(ROOT_DIR) || exit $$? ; rpmbuild --define "_srcrpmdir ." --define "_rpmdir builddir.rpm" -ta `rpmspec -q --queryformat '%{name}-%{version}.tar.gz\n' *spec | head -1`
 	cd $(ROOT_DIR) ; mv -f builddir.rpm/*/* . && rm -rf builddir.rpm
 
-install-prometheus-xentop: bin/prometheus-xentop
-	install -Dm 755 bin/prometheus-xentop -t $(DESTDIR)/$(BINDIR)/
+install-$(NAME): bin/$(NAME)
+	install -Dm 755 bin/$(NAME) -t $(DESTDIR)/$(BINDIR)/
 
-install-prometheus-xentop.service: prometheus-xentop.service
-	install -Dm 644 prometheus-xentop.service -t $(DESTDIR)/$(UNITDIR)/
+install-$(NAME).service: $(NAME).service
+	install -Dm 644 $(NAME).service -t $(DESTDIR)/$(UNITDIR)/
 	echo Now please systemctl --system daemon-reload >&2
 
-install-prometheus-xentop.default:
-	install -Dm 644 prometheus-xentop.default $(DESTDIR)/$(SYSCONFDIR)/default/prometheus-xentop
+install-$(NAME).default:
+	install -Dm 644 $(NAME).default $(DESTDIR)/$(SYSCONFDIR)/default/$(NAME)
 
-install: install-prometheus-xentop install-prometheus-xentop.service install-prometheus-xentop.default
+install: install-$(NAME) install-$(NAME).service install-$(NAME).default
