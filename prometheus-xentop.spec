@@ -3,7 +3,7 @@
 %define mybuildnumber %{?build_number}%{?!build_number:1}
 
 Name:           prometheus-xentop
-Version:        2.0.9
+Version:        2.1.0
 Release:        %{mybuildnumber}%{?dist}
 Summary:        Prometheus exporter for xen stats.
 Group:          Applications/System
