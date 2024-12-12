@@ -3,3 +3,8 @@
 /prometheus-xentop/prometheus-xentop
 bin
 prometheus-xentop.service
+debian/prometheus-xentop*
+debian/README.md
+debian/.debhelper
+debian/debhelper-build-stamp
+debian/files

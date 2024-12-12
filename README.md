@@ -25,5 +25,10 @@ running this program on):
 make rpm
 ```
 
+You can also build a Debian/Ubuntu package with:
+```
+make deb
+```
+
 For users of Qubes OS, a great way of getting a compatible build environment
 is to use https://github.com/Rudd-O/qubes-dom0-container-images .
