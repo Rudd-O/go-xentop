@@ -1,0 +1,12 @@
+#!/usr/bin/make -f
+
+# See debhelper(7) (uncomment to enable).
+# Output every command that modifies files on the build system.
+#export DH_VERBOSE = 1
+
+# Debian passes -Wl for LDflags, skip that, and don't compress dwarf
+#  -z,relro isn't supported yet
+export BUILD_PKG_EXTRA_GO_FLAGS=-ldflags='-compressdwarf=false' -buildmode=pie
+
+%:
+	dh $@

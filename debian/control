@@ -1,0 +1,22 @@
+Source: prometheus-xentop
+Section: kernel
+Priority: optional
+Maintainer: Patrick Plenefisch <simonpatp@gmail.com>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13), sed (>= 4.0), make (>= 4.0), golang, libxen-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/Rudd-O/prometheus-xentop
+Vcs-Browser: https://github.com/Rudd-O/prometheus-xentop
+Vcs-Git: https://github.com/Rudd-O/prometheus-xentop
+
+Package: prometheus-xentop
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+Description: Prometheus exporter for xen stats.
+ This package runs a Prometheus exporter that exports Xen VM statistics.
+ This new major version changes metric names and uses direct connection
+ to xend for more accurate statistics, and statistics not collected
+ before, like RAM usage.
